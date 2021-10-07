@@ -1,0 +1,21 @@
+{
+  "name": "comptes_api",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "main": "./lib/cjs/index.js",
+  "module": "./lib/esm/index.js",
+  "files": [
+    "lib/"
+  ],
+  "scripts": {
+    "tsc": "node --loader ts-node/esm run.ts && rm -rf ./lib && tsc -p tsconfig.json && tsc -p tsconfig-cjs.json"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^16.10.3",
+    "ts-node": "^10.2.1",
+    "typescript": "^4.4.3"
+  }
+}
