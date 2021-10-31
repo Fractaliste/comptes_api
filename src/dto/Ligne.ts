@@ -15,9 +15,13 @@ export class Ligne {
 
     date: Date
 
+    valeur: number
+
     note: string
 
     rapprochement: Releve
 
     isHorsBudget: boolean
+
+    virement?: Ligne
 }
