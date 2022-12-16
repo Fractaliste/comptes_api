@@ -16,6 +16,8 @@ rmDirContentRecursive(destDir)
     .then(files => {
         return Promise.all(files.map(file => handleFile(file)))
     })
+    .then(filenames => Promise.all(filenames.map(file => createInterfaceFile(file))))
+    .then(filenames => filenames.flatMap(f => f))
     .then(filenames => createIndexTs(filenames))
     .then(() => rmDirContentRecursive(tempDir))
     .catch(error => {
@@ -28,11 +30,18 @@ function handleFile(fileName: string): Promise<string> {
     const tempPath = join(tempDir, fileName);
     const tempEditedPath = join(tempDir, `${fileName}_edited`);
     const destPath = join(destDir, fileName);
+
     return copyFile(srcPath, tempPath)
         .then(() => {
             console.log(`Start reading file ${fileName}`);
-            const writingStream = createWriteStream(tempEditedPath, { emitClose: true });
             const readingStream = createReadStream(tempPath);
+            const writingStream = createWriteStream(tempEditedPath, { emitClose: true });
+
+            const className = fileName.replace('.ts', '')
+            writingStream.write(`import { I${className} } from "./I${className}";`)
+            writingStream.write(EOL)
+
+
             const rl = createInterface({
                 input: readingStream,
                 output: writingStream,
@@ -45,7 +54,7 @@ function handleFile(fileName: string): Promise<string> {
                     // Remove all typeorm reference
                 } else {
                     // console.log("line is ", line);
-                    writingStream.write(line)
+                    writingStream.write(line.replace(` ${className} `, ` ${className} implements I${className} `))
                     writingStream.write(EOL)
                 }
 
@@ -62,7 +71,48 @@ function handleFile(fileName: string): Promise<string> {
             })
         })
         .then(() => copyFile(tempEditedPath, destPath))
-        .then(() => destPath)
+        .then(() => fileName)
+}
+
+function createInterfaceFile(fileName: string): Promise<string[]> {
+    const srcPath =  join(tempDir, fileName);
+    const destPath = join(destDir, `I${fileName}`);
+
+    console.log(`Start createInterfaceFile for ${fileName}`);
+    const readingStream = createReadStream(srcPath);
+    const writingStream = createWriteStream(destPath, { emitClose: true });
+
+    const className = fileName.replace('.ts', '')
+
+    const rl = createInterface({
+        input: readingStream,
+        output: writingStream,
+        crlfDelay: Infinity
+    });
+    rl.on("line", (line) => {
+        if (/^\s*@.*\)\s*$/.test(line)) {
+            // Remove all decorator @
+        } else if (line.indexOf("typeorm") !== -1) {
+            // Remove all typeorm reference
+        } else {
+            // console.log("line is ", line);
+
+            writingStream.write(line.replace(className, `I${className}`).replace(" class ", " interface "))
+            writingStream.write(EOL)
+        }
+
+    })
+
+    return new Promise(resolve => {
+        rl.on("close", () => {
+            console.log(`File ${fileName} is closed`);
+            readingStream.close()
+            writingStream.on("close", () => resolve(fileName))
+            writingStream.close()
+
+        })
+    })
+        .then(() => [fileName, `I${fileName}`])
 }
 
 
@@ -91,6 +141,9 @@ function rmDirContentRecursive(dirPath: string): Promise<any> {
 }
 function createIndexTs(filenames: string[]): Promise<any> {
     const indexPath = join(destDir, '..', "index.ts")
+    console.log(filenames);
+
+
     return access(indexPath)
         .then(() => rm(indexPath))
         .catch(() => console.log(`${indexPath} does not exists`))
@@ -98,9 +151,9 @@ function createIndexTs(filenames: string[]): Promise<any> {
             return Promise.all(
 
                 filenames.map(fileName => {
+                    const filePath = join(destDir, fileName)
 
-
-                    const readingStream = createReadStream(fileName, { emitClose: true });
+                    const readingStream = createReadStream(filePath, { emitClose: true });
                     const rl = createInterface({
                         input: readingStream,
                         crlfDelay: Infinity
@@ -110,6 +163,12 @@ function createIndexTs(filenames: string[]): Promise<any> {
                     rl.on("line", (line) => {
                         if (/class\s+(\S+)/.test(line)) {
                             const matches = /class\s+(\S+)/.exec(line)
+
+                            if (matches && matches[1]) {
+                                className = matches[1]
+                            }
+                        } else if (/interface\s+(\S+)/.test(line)) {
+                            const matches = /interface\s+(\S+)/.exec(line)
 
                             if (matches && matches[1]) {
                                 className = matches[1]

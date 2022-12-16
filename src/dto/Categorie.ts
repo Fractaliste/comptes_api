@@ -1,5 +1,6 @@
+import { ICategorie } from "./ICategorie";
 
-export class Categorie {
+export class Categorie implements ICategorie {
 
     id: number;
 

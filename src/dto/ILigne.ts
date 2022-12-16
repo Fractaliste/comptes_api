@@ -1,10 +1,9 @@
-import { ILigne } from "./ILigne";
 import { Categorie } from "./Categorie";
 import { Compte } from "./Compte";
 import { Releve } from "./Releve";
 import { Tier } from "./Tier";
 
-export class Ligne implements ILigne {
+export interface ILigne {
 
     id: number;
 
@@ -26,5 +25,5 @@ export class Ligne implements ILigne {
 
     isHorsBudget: boolean
 
-    virement?: Ligne
+    virement?: ILigne
 }

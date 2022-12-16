@@ -1,5 +1,6 @@
+import { ITier } from "./ITier";
 
-export class Tier {
+export class Tier implements ITier {
 
     id: number;
 

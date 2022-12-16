@@ -1,8 +1,7 @@
-import { IReleve } from "./IReleve";
 import { Compte } from "./Compte";
 import { Ligne } from "./Ligne";
 
-export class Releve implements IReleve {
+export interface IReleve {
 
     id: number;
 
